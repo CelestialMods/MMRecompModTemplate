@@ -11,3 +11,8 @@
 patches.map
 build/
 .vscode/settings.json
+
+N64Recomp*
+OfflineModRecomp*
+RecompModTool*
+RSPRecomp*
