@@ -1,4 +1,31 @@
 BUILD_DIR := build
+MOD_TOML := ./mod.toml
+ASSETS_EXTRACTED_DIR ?= assets_extracted
+ASSETS_INCLUDE_DIR ?= assets_extracted/assets
+
+ifeq ($(OS),Windows_NT)
+PYTHON_EXEC ?= python
+else
+PYTHON_EXEC ?= python3
+endif
+PYTHON_FUNC_MODULE := make_python_functions
+
+define get_python_func_no_build_info
+$(shell $(PYTHON_EXEC) -c "import $(PYTHON_FUNC_MODULE); $(PYTHON_FUNC_MODULE).ModInfo(\"$(MOD_TOML)\", \"$(BUILD_DIR)\").$(1)($(2))")
+endef
+
+# Python Build Info:
+define call_python_func
+	$(PYTHON_EXEC) -c "import $(PYTHON_FUNC_MODULE); $(PYTHON_FUNC_MODULE).ModInfo(\"$(MOD_TOML)\", \"$(BUILD_DIR)\").$(1)($(2))"
+endef
+
+define get_python_func
+$(shell $(PYTHON_EXEC) -c "import $(PYTHON_FUNC_MODULE); $(PYTHON_FUNC_MODULE).ModInfo(\"$(MOD_TOML)\", \"$(BUILD_DIR)\").$(1)($(2))")
+endef
+
+define get_python_val
+$(shell $(PYTHON_EXEC) -c "import $(PYTHON_FUNC_MODULE); print($(PYTHON_FUNC_MODULE).ModInfo(\"$(MOD_TOML)\", \"$(BUILD_DIR)\").$(1))")
+endef
 
 # Allow the user to specify the compiler and linker on macOS
 # as Apple Clang does not support MIPS architecture
@@ -26,6 +53,11 @@ N64RECOMP_BUILD_DIR := $(N64RECOMP_DIR)/build
 RECOMP_MOD_TOOL := $(N64RECOMP_BUILD_DIR)/RecompModTool
 OFFLINE_MOD_TOOL := $(N64RECOMP_BUILD_DIR)/OfflineModRecomp
 
+MOD_FILE := $(call get_python_func,get_mod_file,)
+$(info MOD_FILE = $(MOD_FILE))
+MOD_ELF  := $(call get_python_func,get_mod_elf,)
+$(info MOD_ELF = $(MOD_ELF))
+
 LDSCRIPT := mod.ld
 CFLAGS   := -target mips -mips2 -mabi=32 -O2 -G0 -mno-abicalls -mno-odd-spreg -mno-check-zero-division \
 			-fomit-frame-pointer -ffast-math -fno-unsafe-math-optimizations -fno-builtin-memset \
@@ -42,11 +74,19 @@ C_SRCS := $(shell find src -type f -name '*.c')
 C_OBJS := $(patsubst src/%.c, $(BUILD_DIR)/%.o, $(C_SRCS))
 C_DEPS := $(patsubst src/%.c, $(BUILD_DIR)/%.d, $(C_SRCS))
 
-nrm: $(MOD_ELF) $(RECOMP_MOD_TOOL)
-	$(RECOMP_MOD_TOOL) mod.toml $(BUILD_DIR)
+nrm: $(MOD_FILE)
+
+$(MOD_FILE): $(RECOMP_MOD_TOOL) $(MOD_ELF)
+	$(RECOMP_MOD_TOOL) $(MOD_TOML) $(BUILD_DIR)
 
 init:
 	git submodule update --init --recursive
+
+create_user_build_config:
+	$(call call_python_func,create_user_build_config,)
+
+thunderstore:
+	$(PYTHON_EXEC) ./create_thunderstore_package.py
 
 offline: nrm
 	$(OFFLINE_MOD_TOOL) $(MOD_SYMS) $(MOD_BINARY) $(ZELDA_SYMS) $(OFFLINE_C_OUTPUT)
