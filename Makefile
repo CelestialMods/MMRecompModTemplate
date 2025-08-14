@@ -112,15 +112,25 @@ $(BUILD_DIR)/%.o: src/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -MMD -MF $(@:.o=.d) -c $< -o $@
 
+# Misc Recipes:
 clean:
 ifeq ($(OS),Windows_NT)
-	rmdir "$(BUILD_DIR)" /s /q
-	rmdir "$(N64RECOMP_BUILD_DIR)" /s /q
+	- rmdir "$(BUILD_DIR)" /s /q
+	- rmdir "$(N64RECOMP_BUILD_DIR)" /s /q
+	- rmdir "$(ASSETS_EXTRACTED_DIR)" /s /q
 else
-	rm -rf $(BUILD_DIR)
-	rm -rf $(N64RECOMP_BUILD_DIR)
+	- rm -rf $(BUILD_DIR)
+	- rm -rf $(N64RECOMP_BUILD_DIR)
+	- rm -rf $(ASSETS_EXTRACTED_DIR)
+endif
+
+clean-build:
+ifeq ($(OS),Windows_NT)
+	- rmdir "$(BUILD_DIR)" /s /q
+else
+	- rm -rf $(BUILD_DIR)
 endif
 
 -include $(C_DEPS)
 
-.PHONY: clean nrm offline init elf
+.PHONY: nrm init thunderstore offline elf clean clean-build
